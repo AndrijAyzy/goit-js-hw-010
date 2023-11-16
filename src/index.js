@@ -1,94 +1,53 @@
-import SlimSelect from 'slim-select';
-import 'slim-select/dist/slimselect.css';
-import { fetchBreeds, fetchCatByBreed } from './cat-api.js';
-import { Loading } from 'notiflix/build/notiflix-loading-aio';
-import { Notify } from 'notiflix/build/notiflix-notify-aio';
+import {fetchBreeds, fetchCatByBreed} from './cat-api.js';
 
-const refs = {
-  select: document.querySelector('.breed-select'),
-  loader: document.querySelector('.loader'),
-  err: document.querySelector('.error'),
-  catCard: document.querySelector('.cat-info'),
-};
+const selector = document.querySelector('.breed-select');
+const listEl = document.querySelector('.cat-info');
+const loader = document.querySelector('.loader');
+const error = document.querySelector('.error');
+error.style.display = 'none';
 
-refs.loader.style.display = 'none';
-refs.err.style.display = 'none';
-refs.select.style.display = 'none';
-refs.catCard.style.display = 'none';
 
-Loading.dots({
-  svgColor: '#5897fb',
-  svgSize: '130px',
-  messageFontSize: '30px',
-});
+const APIkey = 'live_qYlL8o9MDIH8U2L6yURyex2Y5rzbgVNFDh0R2EHrDR6dYWpbJMuVjmE2sG4pixTn';
+
+loader.style.display = 'block';
 
 fetchBreeds()
-  .then(data => {
-    refs.select.style.display = 'flex';
-    refs.loader.style.display = 'none';
+    .then(data =>
+        data.forEach(breed => {
+            selector.insertAdjacentHTML("beforeend", `
+                <option value="${breed.id}">${breed.name}</option>
+            `);
+        })
+    )
+    .catch(() => { error.style.display = 'block' })
+    .finally(() =>{ loader.style.display = 'none' });
 
-    createMarkupOptins(data);
-    new SlimSelect({
-      select: refs.select,
-    });
-  })
-  .catch(err => {
-    Notify.failure(refs.err.textContent);
-  })
-  .finally(result => Loading.remove());
 
-function createMarkupOptins(arr) {
-  return arr
-    .map(({ id, name }) => {
-      console.log({ id, name });
 
-      const option = `<option value=${id}>${name}</option>`;
-      refs.select.insertAdjacentHTML('beforeend', option);
-    })
-    .join('');
-}
-
-refs.select.addEventListener('change', e => {
-  const id = e.target.value;
-
-  Loading.dots({
-    svgColor: '#5897fb',
-    svgSize: '130px',
-    messageFontSize: '30px',
-  });
-
-  fetchCatByBreed(id)
-    .then(catInfo => {
-      refs.catCard.style.display = 'flex';
-      createMarkupCards(catInfo);
-    })
-    .catch(err => {
-      Notify.failure(refs.err.textContent);
-    })
-    .finally(result => Loading.remove());
+selector.addEventListener('change', () => {
+    // console.log(selector.value);
+    error.style.display = 'none';
+    listEl.innerHTML = '';
+    loader.style.display = 'block';
+    fetchCatByBreed(selector.value)
+        .then(catData => {
+            const cat = catData[0];
+            listEl.insertAdjacentHTML("beforeend", `
+                <img src="${cat.url}" alt="" class="cat-image">
+                <div class="wrap-text">
+                    <h2 class="cat-info">${cat.breeds[0].name}</h2>
+                    <p>${cat.breeds[0].description}</p>
+                    <span><b>Temperament:</b> ${cat.breeds[0].temperament}</span>
+                </div>
+            `)
+        })
+        .catch(() => { error.style.display = 'block' })
+        .finally(() => { loader.style.display = 'none' });
 });
 
-function createMarkupCards(data) {
-  const {
-    breeds: { name, description, temperament },
-    url,
-  } = data;
 
-  const card = ` 
-      <img class="cat-img" src="${url}" alt="${name}"  >
-       <div class="cat-right">
-      <h1 class="name">${name}</h1>
-      <p class="description">${description}</p>
-      <p class="temperament"><span class="temperament-span">Temperament:</span> ${temperament}</p>    
-      </div>`;
 
-  // const card = `
-  //     <img class="cat-img" src="${data.url}" alt="${data.breeds[0].name}"  >
-  //      <div class="cat-right">
-  //     <h1 class="name">${data.breeds[0].name}</h1>
-  //     <p class="description">${data.breeds[0].description}</p>
-  //     <p class="temperament"><span class="temperament-span">Temperament:</span> ${data.breeds[0].temperament}</p>
-  //     </div>`;
 
-  refs.catCard.innerHTML = card;
-}
+
+
+
